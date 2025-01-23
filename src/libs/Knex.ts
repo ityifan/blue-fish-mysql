@@ -5,13 +5,13 @@ import { CoaMysql } from '../typings';
 
 declare module 'knex' {
   interface QueryBuilder {
-    search<TRecord>(columns: string[], value: string): any;
+    search<TRecord, TResult>(columns: string[], value: string): Knex.QueryBuilder
 
-    filter<TRecord, TResult>(data: CoaMysql.Dic<string | number>, table?: string): any
+    filter<TRecord, TResult>(data: CoaMysql.Dic<string | number>, table?: string): Knex.QueryBuilder
 
-    period<TRecord, TResult>(column: string, from: number, to: number): any
+    period<TRecord, TResult>(column: string, from: number, to: number): Knex.QueryBuilder
 
-    inArray<TRecord, TResult>(array_column: string, value: string | number): any
+    inArray<TRecord, TResult>(array_column: string, value: string | number): Knex.QueryBuilder
   }
 }
 
