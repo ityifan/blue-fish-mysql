@@ -201,6 +201,7 @@ export class MysqlNative<Scheme> {
 
   // 查询ID格式Sort列表
   protected async selectIdSortList(pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
+    // eslint-disable-next-line prefer-const
     let { last, rows, more, ext } = this.checkSortPager(pager)
 
     const qb = this.table(trx).select(this.name + '.' + this.key)
@@ -224,6 +225,7 @@ export class MysqlNative<Scheme> {
   protected async selectIdViewList(pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction, count?: number) {
     if (count === undefined) count = await this.selectListCount(query, trx)
 
+    // eslint-disable-next-line prefer-const
     let { rows, page, pageMax } = this.checkViewPager(pager, count)
 
     const qb = this.table(trx).select(this.name + '.' + this.key)

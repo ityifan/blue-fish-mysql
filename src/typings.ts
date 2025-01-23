@@ -4,6 +4,7 @@ export namespace CoaMysql {
   export interface Dic<T> {
     [key: string]: T
   }
+  // eslint-disable-next-line @typescript-eslint/ban-types
   export type SafePartial<T> = T extends {} ? Partial<T> : any
   export type Query = (qb: Knex.QueryBuilder) => void
   export type QueryBuilder = Knex.QueryBuilder

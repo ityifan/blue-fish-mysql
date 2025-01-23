@@ -19,7 +19,7 @@ export class MysqlUuid {
   private key2 = 0
   private key3 = 0
 
-  constructor(bin: MysqlBin, name: string = 'ID', step = maxStep) {
+  constructor(bin: MysqlBin, name = 'ID', step = maxStep) {
     this.bin = bin
     this.name = name.toUpperCase()
     this.step = step
