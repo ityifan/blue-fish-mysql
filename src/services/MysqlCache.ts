@@ -7,7 +7,6 @@ import { CoaMysql } from '../typings'
 import { MysqlNative } from './MysqlNative'
 
 
-
 export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   redisCache: RedisCache
 
@@ -146,6 +145,8 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const cacheId = 'list-count:' + secure.sha1($.sortQueryString(...finger))
     return await this.redisCache.warp(cacheNsp, cacheId, async () => await super.selectListCount(query, trx))
   }
+
+
 
   protected async findIdList(finger: Array<CoaMysql.Dic<any>>, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
     const cacheNsp = this.getCacheNsp('data')
