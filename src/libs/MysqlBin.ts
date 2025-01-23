@@ -1,7 +1,7 @@
 import { echo } from 'coa-echo'
 import { CoaError } from 'coa-error'
+import * as Knex from 'knex'
 import { CoaMysql } from '../typings'
-import { Knex } from './Knex'
 
 export class MysqlBin {
   public io: any
