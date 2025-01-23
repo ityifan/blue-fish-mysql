@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/method-signature-style */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { _ } from 'coa-helper';
 import * as Knex from 'knex';
 import { CoaMysql } from '../typings';

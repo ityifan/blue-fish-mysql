@@ -44,13 +44,13 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
   // 抽象出的删除缓存的异步函数
 
-  async createDeleteCachePromise(ids: any[], dataList: any[], trx?: CoaMysql.Transaction) {
+  async createDeleteCachePromise(ids: any[], dataList: any[]) {
     await this.deleteCache(ids, dataList);
   }
 
   async insert(data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const id = await super.insert(data, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], [data], trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], [data]);
     trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
 
     return id;
@@ -58,14 +58,14 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
   async mInsert(dataList: Array<CoaMysql.SafePartial<Scheme>>, trx?: CoaMysql.Transaction) {
     const ids = await super.mInsert(dataList, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
     trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return ids;
   }
 
   async updateById(id: string, data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
     const result = await super.updateById(id, data, trx);
     trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return result;
@@ -74,7 +74,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async updateByIds(ids: string[], data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList(ids, data, trx);
     const result = await super.updateByIds(ids, data, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
     result && (trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
@@ -82,7 +82,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async updateForQueryById(id: string, query: CoaMysql.Query, data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
     const result = await super.updateForQueryById(id, query, data, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
     result && (trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
@@ -90,7 +90,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async upsertById(id: string, data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
     const result = await super.upsertById(id, data, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
     trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return result;
   }
@@ -98,7 +98,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async deleteByIds(ids: string[], trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList(ids, undefined, trx);
     const result = await super.deleteByIds(ids, trx);
-    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList, trx);
+    const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
     result && (trx ? MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
