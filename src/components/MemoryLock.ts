@@ -1,0 +1,39 @@
+import { $ } from 'coa-helper'
+
+const MemoryLockData: { [name: string]: boolean } = {}
+
+export class MemoryLock {
+  private readonly key: string
+
+  constructor(key: string) {
+    this.key = key
+  }
+
+  async lock() {
+    if (MemoryLockData[this.key]) {
+      return false
+    } else {
+      MemoryLockData[this.key] = true
+      return true
+    }
+  }
+
+  async unlock() {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete MemoryLockData[this.key]
+  }
+
+  static async start<T>(id: string, worker: () => Promise<T>, interval = 10) {
+    const memoryLock = new MemoryLock(id)
+
+    // 阻塞等待
+    while (!(await memoryLock.lock())) {
+      await $.timeout(interval)
+    }
+
+    // 执行操作，无论是否成功均释放锁
+    return await worker().finally(() => {
+      memoryLock.unlock().then()
+    })
+  }
+}
