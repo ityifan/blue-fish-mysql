@@ -65,7 +65,7 @@ export class MysqlNative<Scheme> {
   }
 
   // 获取ID
-  public async newId() {
+  public async newId(): Promise<any> {
     CoaError.throw('MysqlNative.NewIdMethodNotImplement', '尚未实现newId()方法')
   }
 

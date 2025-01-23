@@ -51,9 +51,9 @@ export class MysqlNativeModel<T> extends MysqlCache<BizAccountStorage.Scheme> {
     super({ ...option, ...config }, bin, cRedis.cache);
   }
 
-  // async newId() {
-  //   return this.prefix + (await uuid.hexId()) + '11'
-  // }
+  async newId() {
+    return this.prefix + (await uuid.hexId()) + '11'
+  }
 
   // 定义一个通用方法
   async c() {

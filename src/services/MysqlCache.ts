@@ -71,6 +71,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     return result;
   }
 
+
   async updateByIds(ids: string[], data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const dataList = await this.getCacheChangedDataList(ids, data, trx);
     const result = await super.updateByIds(ids, data, trx);
