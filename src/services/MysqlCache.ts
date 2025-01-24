@@ -35,6 +35,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async executeCallbacks(trx: CoaMysql.Transaction) {
     const context = await this.getTransactionContext(trx);
     await Promise.all(context.callbacks.map((callback: any) => callback()));
+    context.callbacks = []
   }
 
   // 抽象出的删除缓存的异步函数
