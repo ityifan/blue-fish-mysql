@@ -16,7 +16,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   // 事务上下文管理
-  private static async getTransactionContext(trx?: CoaMysql.Transaction) {
+  async getTransactionContext(trx?: CoaMysql.Transaction) {
 
     if (!trx) CoaError.throw('MysqlCache.MissingTransaction', '缺少事务上下文');
 
@@ -25,14 +25,14 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   // 记录回调到事务上下文
-  private static async addCallback(trx: CoaMysql.Transaction, callback: () => Promise<void>) {
+  async addCallback(trx: CoaMysql.Transaction, callback: () => Promise<void>) {
     const context = await this.getTransactionContext(trx);
 
     context.callbacks.push(callback);
   }
 
   // 在事务提交成功后调用回调
-  private static async executeCallbacks(trx: CoaMysql.Transaction) {
+  async executeCallbacks(trx: CoaMysql.Transaction) {
     const context = await this.getTransactionContext(trx);
     await Promise.all(context.callbacks.map((callback: any) => callback()));
   }
@@ -46,9 +46,11 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     try {
       await task(); // 执行事务内的逻辑
       await trx.commit(); // 提交事务
-      const context = await MysqlCache.getTransactionContext(trx);
-      await Promise.all(context.callbacks.map((callback: any) => callback()));
-      // await MysqlCache.executeCallbacks(trx); // 提交成功后执行回调
+      console.log('事物已提交');
+
+      await this.executeCallbacks(trx); // 提交成功后执行回调
+      console.log('回掉已结束');
+
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
@@ -58,7 +60,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async insert(data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
     const id = await super.insert(data, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], [data]);
-    trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
+    trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
 
     return id;
   }
@@ -66,7 +68,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async mInsert(dataList: Array<CoaMysql.SafePartial<Scheme>>, trx?: CoaMysql.Transaction) {
     const ids = await super.mInsert(dataList, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
-    trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
+    trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return ids;
   }
 
@@ -74,7 +76,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
     const result = await super.updateById(id, data, trx);
-    trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
+    trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return result;
   }
 
@@ -83,7 +85,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const dataList = await this.getCacheChangedDataList(ids, data, trx);
     const result = await super.updateByIds(ids, data, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
-    result && (trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
+    result && (trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
 
@@ -91,7 +93,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
     const result = await super.updateForQueryById(id, query, data, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
-    result && (trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
+    result && (trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
 
@@ -99,7 +101,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const dataList = await this.getCacheChangedDataList([id], data, trx);
     const result = await super.upsertById(id, data, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, [id], dataList);
-    trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
+    trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise();
     return result;
   }
 
@@ -107,7 +109,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const dataList = await this.getCacheChangedDataList(ids, undefined, trx);
     const result = await super.deleteByIds(ids, trx);
     const deleteCachePromise = this.createDeleteCachePromise.bind(this, ids, dataList);
-    result && (trx ? await MysqlCache.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
+    result && (trx ? await this.addCallback(trx, deleteCachePromise) : await deleteCachePromise());
     return result;
   }
 
