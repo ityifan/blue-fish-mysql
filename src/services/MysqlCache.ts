@@ -46,7 +46,9 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     try {
       await task(); // 执行事务内的逻辑
       await trx.commit(); // 提交事务
-      await MysqlCache.executeCallbacks(trx); // 提交成功后执行回调
+      const context = await MysqlCache.getTransactionContext(trx);
+      await Promise.all(context.callbacks.map((callback: any) => callback()));
+      // await MysqlCache.executeCallbacks(trx); // 提交成功后执行回调
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
