@@ -44,13 +44,9 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
   async executeTransaction(trx: CoaMysql.Transaction, task: () => Promise<void>) {
     try {
-      await task(); // 执行事务内的逻辑
-      await trx.commit(); // 提交事务
-      console.log('事物已提交');
-
-      await this.executeCallbacks(trx); // 提交成功后执行回调
-      console.log('回掉已结束');
-
+      await task();
+      await this.executeCallbacks(trx);
+      await trx.commit();
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
