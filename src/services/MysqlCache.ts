@@ -35,6 +35,10 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   async executeCallbacks(trx: CoaMysql.Transaction) {
     const context = await this.getTransactionContext(trx);
     await Promise.all(context.callbacks.map((callback: any) => callback()));
+  }
+  async executeCallbacks2(trx: CoaMysql.Transaction) {
+    const context = await this.getTransactionContext(trx);
+    await Promise.all(context.callbacks.map((callback: any) => callback()));
     context.callbacks = []
   }
 
@@ -48,6 +52,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
       await task();
       await this.executeCallbacks(trx);
       await trx.commit();
+      await this.executeCallbacks2(trx);
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
