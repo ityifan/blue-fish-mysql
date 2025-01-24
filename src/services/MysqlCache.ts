@@ -20,8 +20,11 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
     if (!trx) CoaError.throw('MysqlCache.MissingTransaction', '缺少事务上下文');
 
-    trx.userParams.context = trx.userParams.context || { callbacks: [] }; // 初始化事务上下文
-    return trx.userParams.context;
+    trx.context = trx.context || { callbacks: [] }; // 初始化事务上下文
+    if (!trx.context.callbacks) {
+      trx.context.callbacks = [];  // 确保 callbacks 数组是有效的
+    }
+    return trx.context;
   }
 
   // 记录回调到事务上下文
@@ -36,11 +39,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     const context = await this.getTransactionContext(trx);
     await Promise.all(context.callbacks.map((callback: any) => callback()));
   }
-  async executeCallbacks2(trx: CoaMysql.Transaction) {
-    const context = await this.getTransactionContext(trx);
-    await Promise.all(context.callbacks.map((callback: any) => callback()));
-    context.callbacks = []
-  }
+
 
   // 抽象出的删除缓存的异步函数
   async createDeleteCachePromise(ids: any[], dataList: any[]) {
@@ -52,7 +51,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
       await task();
       await this.executeCallbacks(trx);
       await trx.commit();
-      await this.executeCallbacks2(trx);
+      await this.executeCallbacks(trx);
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
