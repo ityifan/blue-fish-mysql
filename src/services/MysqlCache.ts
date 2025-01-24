@@ -1,3 +1,4 @@
+import { echo } from 'coa-echo'
 import { CoaError } from 'coa-error'
 import { $, _ } from 'coa-helper'
 import { CoaRedis, RedisCache } from 'coa-redis'
@@ -5,7 +6,6 @@ import { secure } from 'coa-secure'
 import { MysqlBin } from '../libs/MysqlBin'
 import { CoaMysql } from '../typings'
 import { MysqlNative } from './MysqlNative'
-
 
 export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   redisCache: RedisCache
@@ -15,36 +15,44 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     this.redisCache = redisCache
   }
 
-
   // 事务上下文管理
-
-  private static getTransactionContext(trx?: CoaMysql.Transaction) {
+  private static async getTransactionContext(trx?: CoaMysql.Transaction) {
 
     if (!trx) CoaError.throw('MysqlCache.MissingTransaction', '缺少事务上下文');
 
     trx.userParams.context = trx.userParams.context || { callbacks: [] }; // 初始化事务上下文
     return trx.userParams.context;
   }
-  // 记录回调到事务上下文
 
-  private static addCallback(trx: CoaMysql.Transaction, callback: () => Promise<void>) {
-    const context = this.getTransactionContext(trx);
+  // 记录回调到事务上下文
+  private static async addCallback(trx: CoaMysql.Transaction, callback: () => Promise<void>) {
+    const context = await this.getTransactionContext(trx);
 
     context.callbacks.push(callback);
   }
-  // 在事务提交成功后调用回调
 
+  // 在事务提交成功后调用回调
   private static async executeCallbacks(trx: CoaMysql.Transaction) {
-    const context = this.getTransactionContext(trx);
+    const context = await this.getTransactionContext(trx);
     for (const callback of context.callbacks) {
       await callback();
     }
   }
 
   // 抽象出的删除缓存的异步函数
-
   async createDeleteCachePromise(ids: any[], dataList: any[]) {
     await this.deleteCache(ids, dataList);
+  }
+
+  async executeTransaction(trx: CoaMysql.Transaction, task: () => Promise<void>) {
+    try {
+      await task(); // 执行事务内的逻辑
+      await trx.commit(); // 提交事务
+      await MysqlCache.executeCallbacks(trx); // 提交成功后执行回调
+    } catch (err) {
+      await trx.rollback(); // 回滚事务
+      throw err; // 抛出异常
+    }
   }
 
   async insert(data: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
@@ -129,24 +137,11 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     await this.deleteCache([], [])
   }
 
-  async executeTransaction(trx: CoaMysql.Transaction, task: () => Promise<void>) {
-    try {
-      await task(); // 执行事务内的逻辑
-      await trx.commit(); // 提交事务
-      await MysqlCache.executeCallbacks(trx); // 提交成功后执行回调
-    } catch (err) {
-      await trx.rollback(); // 回滚事务
-      throw err; // 抛出异常
-    }
-  }
-
   protected async findListCount(finger: Array<CoaMysql.Dic<any>>, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
     const cacheNsp = this.getCacheNsp('data')
     const cacheId = 'list-count:' + secure.sha1($.sortQueryString(...finger))
     return await this.redisCache.warp(cacheNsp, cacheId, async () => await super.selectListCount(query, trx))
   }
-
-
 
   protected async findIdList(finger: Array<CoaMysql.Dic<any>>, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
     const cacheNsp = this.getCacheNsp('data')
@@ -212,8 +207,6 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
 
   protected async deleteCache(ids: string[], dataList: Array<CoaMysql.SafePartial<Scheme>>) {
-    console.log('删除了缓存');
-
     const deleteIds = [] as CoaRedis.CacheDelete[]
     deleteIds.push([this.getCacheNsp('id'), ids])
     deleteIds.push([this.getCacheNsp('data'), []])
@@ -231,5 +224,6 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
       })
     })
     await this.redisCache.mDelete(deleteIds)
+    echo.grey(`REDIS:DeleteIds${deleteIds};`)
   }
 }
