@@ -34,22 +34,12 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   // 在事务提交成功后调用回调
   private static async executeCallbacks(trx: CoaMysql.Transaction) {
     const context = await this.getTransactionContext(trx);
-    for (const callback of context.callbacks) {
-      await callback();
-    }
+    await Promise.all(context.callbacks.map((callback: any) => callback()));
   }
 
   // 抽象出的删除缓存的异步函数
   async createDeleteCachePromise(ids: any[], dataList: any[]) {
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<void>(async (resolve, reject) => {
-      try {
-        await this.deleteCache(ids, dataList);  // 删除缓存
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return Promise.resolve(this.deleteCache(ids, dataList));
   }
 
   async executeTransaction(trx: CoaMysql.Transaction, task: () => Promise<void>) {
