@@ -41,7 +41,15 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
   // 抽象出的删除缓存的异步函数
   async createDeleteCachePromise(ids: any[], dataList: any[]) {
-    await this.deleteCache(ids, dataList);
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await this.deleteCache(ids, dataList);  // 删除缓存
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   async executeTransaction(trx: CoaMysql.Transaction, task: () => Promise<void>) {
