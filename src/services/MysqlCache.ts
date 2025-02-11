@@ -50,8 +50,6 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
     try {
       await task();
       await this.executeCallbacks(trx);
-      await trx.commit();
-      await this.executeCallbacks(trx);
     } catch (err) {
       await trx.rollback(); // 回滚事务
       throw err; // 抛出异常
