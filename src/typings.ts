@@ -1,13 +1,24 @@
 import { Knex } from "knex"
+export type Dic<T = any> = Record<string, T>
 
 export namespace CoaMysql {
   export interface Dic<T> {
     [key: string]: T
   }
 
+
+  // 扩展后的 QueryBuilder 类型（注意这里继承了 Knex 自带的）
+  export interface ExtendedQueryBuilder<TRecord extends Record<string, any> = any, TResult = any>
+    extends Knex.QueryBuilder<TRecord, TResult> {
+    filter(data: Dic<string | number>, table?: string): ExtendedQueryBuilder<TRecord, TResult>
+    search(columns: string[], value: string): ExtendedQueryBuilder<TRecord, TResult>
+    period(column: string, from: number, to: number): ExtendedQueryBuilder<TRecord, TResult>
+    inArray(array_column: string, value: string | number): ExtendedQueryBuilder<TRecord, TResult>
+  }
+
   // eslint-disable-next-line @typescript-eslint/ban-types
   export type SafePartial<T> = T extends {} ? Partial<T> : any
-  export type Query = (qb: Knex.QueryBuilder) => void
+  export type Query<TRecord extends Record<string, any> = Record<string, any>, TResult = any> = (qb: ExtendedQueryBuilder<TRecord, TResult>) => void
   export type QueryBuilder = Knex.QueryBuilder
   export type Transaction = any
   export interface Pager {

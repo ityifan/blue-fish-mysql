@@ -2,7 +2,6 @@ import { RedisCache } from 'coa-redis';
 import { CoaMysql, MysqlBin, MysqlCache, MysqlStorage, MysqlUuid } from '..';
 import cMysql from './cMysql';
 import cRedis from './cRedis';
-
 // 配置项
 const ConfigMap = {
   host: 'localhost',
@@ -61,8 +60,20 @@ export class MysqlNativeModel<T> extends MysqlCache<BizAccountStorage.Scheme> {
     await cMysql.transaction(async (trx: any) => {
       await this.insert({ key: 'a' }, trx)
       await this.insert({ key: 'b' }, trx)
+      // await this.findIdList(()=>{})
     })
   }
+  async getList(where: { status: number }, where2: { search: string }) {
+    const query: Query = (qb) => {
+      qb.filter(where)
+      qb.search(['appId'], where2.search)
+    }
+
+    const list = await this.findIdList([where, where2], query)
+
+    return list
+  }
+
 }
 
 // BizAccountStorage 相关类型声明
