@@ -1,4 +1,4 @@
-import { RedisCache } from 'coa-redis'
+import { RedisCache } from 'blue-fish-redis'
 import { MysqlBin } from '../libs/MysqlBin'
 import { MysqlCache } from '../services/MysqlCache'
 

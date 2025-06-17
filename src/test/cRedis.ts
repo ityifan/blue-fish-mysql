@@ -1,4 +1,4 @@
-import { RedisBin, RedisCache } from 'coa-redis'
+import { RedisBin, RedisCache } from 'blue-fish-redis'
 
 export default new (class {
   public bin = new RedisBin({
