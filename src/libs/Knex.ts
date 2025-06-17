@@ -1,5 +1,5 @@
 
-import { _ } from 'coa-helper'
+import { _ } from 'blue-fish-helper'
 import type { Knex as KnexType } from 'knex'
 import Knex, { knex } from 'knex'
 import type { CoaMysql } from '../typings'

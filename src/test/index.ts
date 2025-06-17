@@ -1,4 +1,4 @@
-import { $ } from 'coa-helper'
+import { $ } from 'blue-fish-helper'
 import test_storage from './test_storage'
 import test_uuid from './test_uuid'
 

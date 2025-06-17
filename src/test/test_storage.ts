@@ -1,9 +1,9 @@
+import { $, _ } from 'blue-fish-helper'
 import { echo } from 'coa-echo'
-import { $, _ } from 'coa-helper'
 import cMysql from './cMysql'
 
 export default new (class {
-  noop() {}
+  noop() { }
 
   async testStorageTimeout() {
     const key = 'test' + _.random(10, 99)

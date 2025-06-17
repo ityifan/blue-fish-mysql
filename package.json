@@ -22,9 +22,9 @@
     "sync": "curl -X PUT 'https://npmmirror.com/sync/blue-fish-mysql?sync_upstream=true'"
   },
   "dependencies": {
+    "blue-fish-helper": "^1.0.2",
     "coa-echo": "^1.2.1",
     "coa-error": "^1.5.2",
-    "coa-helper": "^1.2.1",
     "coa-redis": "^1.6.0",
     "coa-secure": "^1.2.0",
     "knex": "^3.1.0",

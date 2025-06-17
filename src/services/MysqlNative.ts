@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-dynamic-delete */
 /* eslint-disable no-prototype-builtins */
+import { _ } from 'blue-fish-helper'
 import { CoaError } from 'coa-error'
-import { _ } from 'coa-helper'
 import { MysqlBin } from '../libs/MysqlBin'
 import { CoaMysql } from '../typings'
 

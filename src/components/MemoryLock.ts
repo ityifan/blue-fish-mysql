@@ -1,4 +1,4 @@
-import { $ } from 'coa-helper'
+import { $ } from 'blue-fish-helper'
 
 const MemoryLockData: { [name: string]: boolean } = {}
 
