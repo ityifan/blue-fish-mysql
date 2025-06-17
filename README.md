@@ -14,7 +14,7 @@ MySQL database components for coajs, including basic data models, cache data mod
 - **Functional**: Basic data connection based on [mysql](https://github.com/mysqljs/mysql)，SQL query based on [knex](https://github.com/knex/knex). Pay attention to performance, full-featured, including original library all use methods
 - **Lightweight**: No more than 1,000 lines of code, do not rely on other third-party libraries
 - **Fast and Convenient**: Basic data model comes with CRUD operation, no extra code
-- **Automatic Cache**: Cache data model automatically performs data cache management (cache generation, cache elimination, etc.), cache is based on[coa-redis](https://github.com/coajs/coa-redis)
+- **Automatic Cache**: Cache data model automatically performs data cache management (cache generation, cache elimination, etc.), cache is based on[blue-fish-redis](https://github.com/coajs/blue-fish-redis)
 - **TypeScript**: All written in TypeScript, type constraint, IDE friendship
 
 ## Component
@@ -228,17 +228,17 @@ await User.customMethodForUser()
 
 ### Cache data model
 
-Based on [coa-redis](https://www.npmjs.com/package/coa-redis) to achieve fast and efficient data cache logic, and **unify the cache, maintain the life cycle of the cache, to ensure the consistency of cache and mysql data**
+Based on [blue-fish-redis](https://www.npmjs.com/package/blue-fish-redis) to achieve fast and efficient data cache logic, and **unify the cache, maintain the life cycle of the cache, to ensure the consistency of cache and mysql data**
 
-Need to install `coa-redis` before use, instructions for use to view [here](https://github.com/coajs/coa-redis)
+Need to install `blue-fish-redis` before use, instructions for use to view [here](https://github.com/coajs/blue-fish-redis)
 
 The method of use of cache data model is exactly the same as the basic data model. Only need to replace the `MysqlNative` to be `MysqlCache`
 
 ```typescript
 import { CoaMysql, MysqlCache } from 'coa-mysql'
-import { RedisBin, RedisCache } from 'coa-redis'
+import { RedisBin, RedisCache } from 'blue-fish-redis'
 
-// Define a Redis instance, detail usage see https://github.com/coajs/coa-redis
+// Define a Redis instance, detail usage see https://github.com/coajs/blue-fish-redis
 const redisCache = new RedisCache(new RedisBin({ host: '127.0.0.1' }))
 
 // Define the base class for a cache data model

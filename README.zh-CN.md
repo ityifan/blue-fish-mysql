@@ -14,7 +14,7 @@ MySQL 数据库组件 for coajs，包含基本数据模型、缓存数据模型�
 - **功能齐全**: 基础数据连接基于[mysql](https://github.com/mysqljs/mysql)，SQL 查询基于[knex](https://github.com/knex/knex)，注重性能，功能齐全包含原生库所有使用方式
 - **简单轻量**: 不超过 1000 行代码，不依赖于其他第三方库
 - **快捷方便**: 基本数据模型自带 CRUD 操作，无需额外代码
-- **自动缓存**: 缓存数据模型能自动进行数据的缓存管理（缓存生成、缓存淘汰等逻辑），缓存基于[coa-redis](https://github.com/coajs/coa-redis)
+- **自动缓存**: 缓存数据模型能自动进行数据的缓存管理（缓存生成、缓存淘汰等逻辑），缓存基于[blue-fish-redis](https://github.com/coajs/blue-fish-redis)
 - **TypeScript**: 全部使用 TypeScript 书写，类型约束、IDE 友好
 
 ## 组件
@@ -227,17 +227,17 @@ await User.customMethodForUser()
 
 ### 缓存数据模型
 
-基于 [coa-redis](https://www.npmjs.com/package/coa-redis) 实现快速高效的数据缓存逻辑，并**统一对缓存进行管理、维护缓存的生命周期、保证缓存与 MySQL 数据的一致性**
+基于 [blue-fish-redis](https://www.npmjs.com/package/blue-fish-redis) 实现快速高效的数据缓存逻辑，并**统一对缓存进行管理、维护缓存的生命周期、保证缓存与 MySQL 数据的一致性**
 
-使用之前需安装 `coa-redis` ，使用方法可查看 [这里](https://github.com/coajs/coa-redis)
+使用之前需安装 `blue-fish-redis` ，使用方法可查看 [这里](https://github.com/coajs/blue-fish-redis)
 
 缓存数据模型的使用方法和基本数据模型完全相同，仅需要将 `MysqlNative` 替换为 `MysqlCache`
 
 ```typescript
 import { CoaMysql, MysqlCache } from 'coa-mysql'
-import { RedisBin, RedisCache } from 'coa-redis'
+import { RedisBin, RedisCache } from 'blue-fish-redis'
 
-// 定义一个redis实例，详细用法详见 https://github.com/coajs/coa-redis
+// 定义一个redis实例，详细用法详见 https://github.com/coajs/blue-fish-redis
 const redisCache = new RedisCache(new RedisBin({ host: '127.0.0.1' }))
 
 // 定义一个缓存数据模型的基类
