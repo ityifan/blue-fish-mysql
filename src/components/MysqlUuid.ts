@@ -1,4 +1,4 @@
-import { _, HashIds } from 'coa-helper'
+import { _, HashIds } from 'blue-fish-helper'
 import { MysqlBin } from '../libs/MysqlBin'
 import { MemoryLock } from './MemoryLock'
 
