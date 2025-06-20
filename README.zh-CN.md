@@ -1,13 +1,13 @@
-# coa-mysql
+# blue-fish-mysqll
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/coa-mysql.svg?style=flat-square)](https://www.npmjs.org/package/coa-mysql)
-[![npm downloads](https://img.shields.io/npm/dm/coa-mysql.svg?style=flat-square)](http://npm-stat.com/charts.html?package=coa-mysql)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/coajs/coa-mysql/pulls)
+[![npm version](https://img.shields.io/npm/v/blue-fish-mysqll.svg?style=flat-square)](https://www.npmjs.org/package/blue-fish-mysqll)
+[![npm downloads](https://img.shields.io/npm/dm/blue-fish-mysqll.svg?style=flat-square)](http://npm-stat.com/charts.html?package=blue-fish-mysqll)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/coajs/blue-fish-mysqll/pulls)
 
 [English](README.md) | 简体中文
 
-MySQL 数据库组件 for coajs，包含基本数据模型、缓存数据模型、分布式 ID 等
+MySQL 数据库组件，包含基本数据模型、缓存数据模型、分布式 ID 等
 
 ## 特点
 
@@ -28,13 +28,13 @@ MySQL 数据库组件 for coajs，包含基本数据模型、缓存数据模型�
 ### 安装
 
 ```shell
-yarn add coa-mysql
+yarn add blue-fish-mysqll
 ```
 
 ### 实例配置
 
 ```typescript
-import { MysqlBin } from 'coa-mysql'
+import { MysqlBin } from 'blue-fish-mysqll'
 
 // MySQL配置
 const mysqlConfig = {
@@ -54,7 +54,100 @@ const mysqlConfig = {
 // 初始化Mysql基本连接，后续所有模型均依赖此实例
 const mysqlBin = new MysqlBin(mysqlConfig)
 ```
+## Bug
+It is best to rewrite the transaction method in MySQL config after fixing the caching issue of the transaction
 
+```typescript
+
+import cRedis from 'app/cRedis';
+import { CoaMysql, MysqlBin, MysqlCache, MysqlNative, MysqlStorage, MysqlUuid } from 'blue-fish-mysql';
+import { CoaError } from 'coa-error';
+const cConfig = {
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: '',
+    charset: 'utf8mb4',
+    trace: true,
+    debug: false,
+
+    databases: {
+        main: { database: 'my-databases', ms: 7 * 24 * 3600 * 1000 },
+    },
+}
+const transaction = async (task: (trx: CoaMysql.Transaction) => Promise<any>) => {
+    let list: any = []
+    await bin.io.transaction(async (trx: CoaMysql.Transaction) => {
+        await storage.executeTransaction(trx, async () => {
+            await task(trx);
+        });
+        list = trx.context.callbacks
+    });
+    await Promise.all(list.map((callback: any) => callback()));
+};
+
+
+const config = cConfig
+const bin = new MysqlBin(config)
+const uuid = new MysqlUuid(bin, 'ID')
+const ouid = new MysqlUuid(bin, 'ORDER', 99000)
+const quid = new MysqlUuid(bin, 'QUOTA', 99000) // 额度订单ID
+const storage = new MysqlStorage(bin, cRedis.cache)
+
+
+const suffix = ''
+export class MysqlNatived<Schema> extends MysqlNative<Schema> {
+    constructor(option: CoaMysql.ModelOption<Schema>) {
+        super(option, bin)
+    }
+
+    async newId() {
+        return this.prefix + (await uuid.hexId()) + suffix
+    }
+
+    async checkById(id: string, pick = this.columns, trx?: CoaMysql.Transaction) {
+        return (await this.getById(id, pick, trx)) ?? CoaError.throw('MysqlNative.DataNotFound', `${this.title}不存在`)
+    }
+}
+
+export class MysqlCached<Schema> extends MysqlCache<Schema> {
+    constructor(option: CoaMysql.ModelOption<Schema>) {
+        super(option, bin, cRedis.cache)
+    }
+
+    async newId() {
+        return this.prefix + (await uuid.hexId()) + suffix
+    }
+}
+
+export default new (class {
+    public uuid = uuid
+    public ouid = ouid
+    public quid = quid
+    public storage = storage
+    public io = bin.io
+    public bin = bin
+    public transaction = transaction
+
+})()
+
+declare global {
+    type Query = CoaMysql.Query
+    type Pager = CoaMysql.Pager
+    type Transaction = CoaMysql.Transaction
+    type QueryBuilder = any
+}
+
+```
+Use the following
+
+```typescript
+        await cMysql.transaction(async (trx: Knex.Transaction) => {
+            const result = await mBizAccountStorage.insert({ key: 'a' }, trx);
+            await mBizAccountStorage.insert({ key: 'b' }, trx);
+            await mBizAccountStorage.updateById('basage8a3dac2da51d446d', { key: 'q' }, trx)
+        });
+```
 ### 基本 SQL 查询
 
 新建用户表`user`，表结构如下
@@ -103,7 +196,7 @@ mysqlBin.io.table('user').delete().where({ userId: 'user-a' })
 在实际项目工程中，为了保证查询的高效、严谨，我们并不会直接操作 SQL 语句。基本的数据模块可以帮助我们实现 CURD 操作。 通过如下方式定义一个基本数据模型`User`
 
 ```typescript
-import { MysqlBin, MysqlNative } from 'coa-mysql'
+import { MysqlBin, MysqlNative } from 'blue-fish-mysqll'
 
 // 定义User的默认结构
 const userScheme = {
@@ -183,7 +276,7 @@ await User.customMethod() // 调用自定义方法
 实际项目中，我们可能需要定义多个模型，每个模型上都有一些公共方法。这时，我们可以抽象一个基类模型，其他模型继承这个基类模型
 
 ```typescript
-import { CoaMysql } from 'coa-mysql'
+import { CoaMysql } from 'blue-fish-mysqll'
 
 // 通过mysqlBin定义一个模型的基类，各个模型都可以使用这个基类
 export class MysqlNativeModel<T> extends MysqlNative<T> {
@@ -234,7 +327,7 @@ await User.customMethodForUser()
 缓存数据模型的使用方法和基本数据模型完全相同，仅需要将 `MysqlNative` 替换为 `MysqlCache`
 
 ```typescript
-import { CoaMysql, MysqlCache } from 'coa-mysql'
+import { CoaMysql, MysqlCache } from 'blue-fish-mysqll'
 import { RedisBin, RedisCache } from 'blue-fish-redis'
 
 // 定义一个redis实例，详细用法详见 https://github.com/coajs/blue-fish-redis
