@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/method-signature-style */
-import { _ } from 'coa-helper'
+import { _ } from 'blue-fish-helper'
 import * as Knex from 'knex'
 import { CoaMysql } from '../typings'
 
