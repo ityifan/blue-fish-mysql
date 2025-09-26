@@ -2,7 +2,7 @@ import { RedisCache } from "blue-fish-redis"
 import { MysqlBin } from "../libs/MysqlBin"
 import { CoaMysql } from "../typings"
 
-export class MysqlSafeTransaction {
+export class SafeTransaction {
     private readonly bin: MysqlBin
     private readonly cache: RedisCache
 
