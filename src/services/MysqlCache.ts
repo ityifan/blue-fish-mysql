@@ -1,6 +1,6 @@
+import { $, _ } from 'blue-fish-helper'
+import { CoaRedis, RedisCache } from 'blue-fish-redis'
 import { CoaError } from 'coa-error'
-import { $, _ } from 'coa-helper'
-import { CoaRedis, RedisCache } from 'coa-redis'
 import { secure } from 'coa-secure'
 import { MysqlBin } from '../libs/MysqlBin'
 import { CoaMysql } from '../typings'

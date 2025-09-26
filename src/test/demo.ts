@@ -1,6 +1,5 @@
 import { RedisCache } from 'blue-fish-redis';
 import { CoaMysql, MysqlBin, MysqlCache, MysqlStorage, MysqlUuid } from '..';
-import cMysql from './cMysql';
 import cRedis from './cRedis';
 // 配置项
 const ConfigMap = {
@@ -54,15 +53,7 @@ export class MysqlNativeModel<T> extends MysqlCache<BizAccountStorage.Scheme> {
     return this.prefix + (await uuid.hexId()) + '11'
   }
 
-  // 定义一个通用方法
-  async c() {
-    // await cMysql.
-    await cMysql.transaction(async (trx: any) => {
-      await this.insert({ key: 'a' }, trx)
-      await this.insert({ key: 'b' }, trx)
-      // await this.findIdList(()=>{})
-    })
-  }
+
   async getList(where: { status: number }, where2: { search: string }) {
     const query: Query = (qb) => {
       qb.filter(where)
@@ -112,5 +103,3 @@ const modelInstance = new MysqlNativeModel({
   pick,
   caches,
 });
-
-modelInstance.c();

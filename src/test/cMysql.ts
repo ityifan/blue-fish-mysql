@@ -22,14 +22,6 @@ const ouid = new MysqlUuid(bin, 'ORDER', 99000)
 const quid = new MysqlUuid(bin, 'QUOTA', 99000) // 额度订单ID
 const storage = new MysqlStorage(bin, cRedis.cache)
 
-const transaction = async (task: (trx: CoaMysql.Transaction) => Promise<void>) => {
-  return await bin.io.transaction(async (trx: CoaMysql.Transaction) => {
-    // 使用包装函数
-    await storage.executeTransaction(trx, async () => {
-      await task(trx); // 这里显式传递 trx
-    });
-  });
-}
 export class MysqlNatived<Schema> extends MysqlNative<Schema> {
   constructor(option: CoaMysql.ModelOption<Schema>) {
     super(option, bin)
@@ -50,8 +42,6 @@ export default new (class {
   public storage = storage
   public io = bin.io
   public bin = bin
-  public transaction = transaction
-
 
 })()
 
