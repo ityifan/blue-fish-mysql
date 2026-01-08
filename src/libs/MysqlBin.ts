@@ -4,7 +4,7 @@ import { CoaMysql } from '../typings'
 import { Knex } from './Knex'
 
 export class MysqlBin {
-  public io: any
+  public io: Knex.Knex
   public config: CoaMysql.Config
 
   constructor(config: CoaMysql.Config) {
