@@ -8,7 +8,6 @@ on:
 jobs:
   publish:
     name: Publish
-
     runs-on: ubuntu-latest
 
     steps:
@@ -32,11 +31,17 @@ jobs:
           yarn version --no-git-tag-version --new-version ${{ github.event.release.tag_name }}
           yarn build
 
-      - name: Publish
+      # ✅ 新增：显式写 npm token（关键）
+      - name: Setup npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.BLUE_FISH_MYSQL }}
+
+      # ✅ 修改：加 --non-interactive 和 --access public
+      - name: Publish
         run: |
-          yarn publish dist
+          yarn publish dist --non-interactive --access public
 
       - name: Sync
         run: |
