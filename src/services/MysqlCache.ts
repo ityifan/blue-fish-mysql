@@ -74,7 +74,14 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   async mGetByIds(ids: string[], pick = this.pick, trx?: CoaMysql.Transaction, ms = this.ms, force = false) {
-    const result = trx?.__isSafeTransaction ? await super.mGetByIds(ids, this.columns, trx) : await this.redisCache.mWarp(this.getCacheNsp('id'), ids, async ids => await super.mGetByIds(ids, this.columns, trx), ms, force)
+    const uniqueIds = _.uniq(ids)
+    const count = uniqueIds.length
+    const mGetByIdsChunk = _.toInteger(this.bin.config.mGetByIdsChunk || 0)
+    if (mGetByIdsChunk > 0 && count > mGetByIdsChunk) {
+      CoaError.throw('MysqlCache.MGetByIdsChunkExceeded', `mGetByIds数量超过限制: ${count}/${mGetByIdsChunk}`)
+    }
+    if (count === 0) return {}
+    const result = trx?.__isSafeTransaction ? await super.mGetByIds(uniqueIds, this.columns, trx) : await this.redisCache.mWarp(this.getCacheNsp('id'), uniqueIds, async ids => await super.mGetByIds(ids, this.columns, trx), ms, force)
     _.forEach(result, (v, k) => {
       result[k] = this.pickResult(v, pick)
     })
@@ -108,13 +115,15 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   async mGetCountBy(field: string, ids: string[], trx?: CoaMysql.Transaction) {
+    const uniqueIds = _.uniq(ids)
+    if (uniqueIds.length === 0) return {}
     const queryFunction = async () => {
-      const rows = (await this.table(trx).select({ id: field }).count({ count: this.key }).whereIn(field, ids).groupBy(field)) as any[]
+      const rows = (await this.table(trx).select({ id: field }).count({ count: this.key }).whereIn(field, uniqueIds).groupBy(field)) as any[]
       const result: CoaMysql.Dic<number> = {}
       _.forEach(rows, ({ id, count }) => (result[id] = count))
       return result
     }
-    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.redisCache.mWarp(this.getCacheNsp('count', field), ids, queryFunction)
+    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.redisCache.mWarp(this.getCacheNsp('count', field), uniqueIds, queryFunction)
     return result
   }
 

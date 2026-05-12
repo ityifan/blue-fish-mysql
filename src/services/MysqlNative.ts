@@ -152,13 +152,15 @@ export class MysqlNative<Scheme> {
   // 通过ID获取多个
   async mGetByIds(ids: string[], pick = this.pick, trx?: CoaMysql.Transaction) {
     const result: CoaMysql.Dic<Scheme> = {}
+    const uniqueIds = _.uniq(ids)
+    if (uniqueIds.length === 0) return result
     !pick.includes(this.key) && pick.unshift(this.key)
-    const rows = await this.table(trx).select(pick).whereIn(this.key, ids)
+    const rows = await this.table(trx).select(pick).whereIn(this.key, uniqueIds)
     rows.forEach((v: any) => {
       const key = v[this.key] as string
       result[key] = this.result(v, pick) as any
     })
-    ids.forEach(id => {
+    uniqueIds.forEach(id => {
       if (!result.hasOwnProperty(id)) result[id] = null as any
     })
     return result

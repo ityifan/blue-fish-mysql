@@ -50,6 +50,7 @@ export namespace CoaMysql {
     user: string
     password: string
     charset: string
+    mGetByIdsChunk: number
     databases: {
       [name: string]: { database: string; ms: number }
     }
