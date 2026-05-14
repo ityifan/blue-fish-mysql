@@ -6,8 +6,9 @@ const ConfigMap = {
   host: 'localhost',
   port: 3306,
   user: 'root',
-  password: '19990728',
+  password: '',
   charset: 'utf8mb4',
+  mGetByIdsChunk: 1000,
   trace: true,
   debug: false,
   databases: {

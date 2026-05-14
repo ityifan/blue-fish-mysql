@@ -1,4 +1,4 @@
-import { $, _ } from 'blue-fish-helper'
+import { _ } from 'blue-fish-helper'
 import { CoaRedis, RedisCache } from 'blue-fish-redis'
 import { CoaError } from 'coa-error'
 import { secure } from 'coa-secure'
@@ -65,16 +65,23 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   async getById(id: string, pick = this.columns, trx?: CoaMysql.Transaction, ms = this.ms, force = false) {
-    const result = trx?.__isSafeTransaction ? await super.getById(id, this.columns, trx) : await this.redisCache.warp(this.getCacheNsp('id'), id, async () => await super.getById(id, this.columns, trx), ms, force)
+    const result = trx?.__isSafeTransaction ? await super.getById(id, this.columns, trx) : await this.cacheWarp(this.getCacheNsp('id'), id, async () => await super.getById(id, this.columns, trx), ms, force)
     return this.pickResult(result, pick)
   }
 
   async getIdBy(field: string, value: string | number, trx?: CoaMysql.Transaction) {
-    return trx?.__isSafeTransaction ? await super.getIdBy(field, value, trx) : await this.redisCache.warp(this.getCacheNsp('index', field), '' + value, async () => await super.getIdBy(field, value, trx))
+    return trx?.__isSafeTransaction ? await super.getIdBy(field, value, trx) : await this.cacheWarp(this.getCacheNsp('index', field), '' + value, async () => await super.getIdBy(field, value, trx))
   }
 
   async mGetByIds(ids: string[], pick = this.pick, trx?: CoaMysql.Transaction, ms = this.ms, force = false) {
-    const result = trx?.__isSafeTransaction ? await super.mGetByIds(ids, this.columns, trx) : await this.redisCache.mWarp(this.getCacheNsp('id'), ids, async ids => await super.mGetByIds(ids, this.columns, trx), ms, force)
+    const uniqueIds = _.uniq(ids)
+    const count = uniqueIds.length
+    const mGetByIdsChunk = _.toInteger(this.bin.config.mGetByIdsChunk || 0)
+    if (mGetByIdsChunk > 0 && count > mGetByIdsChunk) {
+      CoaError.throw('MysqlCache.MGetByIdsChunkExceeded', `mGetByIds数量超过限制: ${count}/${mGetByIdsChunk}`)
+    }
+    if (count === 0) return {}
+    const result = trx?.__isSafeTransaction ? await super.mGetByIds(uniqueIds, this.columns, trx) : await this.redisCache.mWarp(this.getCacheNsp('id'), uniqueIds, async ids => await super.mGetByIds(ids, this.columns, trx), ms, force)
     _.forEach(result, (v, k) => {
       result[k] = this.pickResult(v, pick)
     })
@@ -87,34 +94,47 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
   }
 
   async findListCount(finger: Array<CoaMysql.Dic<any>>, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    const cacheId = 'list-count:' + secure.sha1($.sortQueryString(...finger))
-    return trx?.__isSafeTransaction ? await super.selectListCount(query, trx) : await this.redisCache.warp(this.getCacheNsp('data'), cacheId, async () => await super.selectListCount(query, trx))
+    const qb = this.buildListCountQuery(query, trx)
+    const cacheId = this.getListCacheId('list-count', finger, qb)
+    const worker = async () => {
+      const rows = await qb
+      return (rows[0]?.count as number) || 0
+    }
+    return trx?.__isSafeTransaction ? await worker() : await this.cacheWarp(this.getCacheNsp('data'), cacheId, worker)
   }
 
   async findIdList(finger: Array<CoaMysql.Dic<any>>, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    const cacheId = 'list:' + secure.sha1($.sortQueryString(...finger))
-    return trx?.__isSafeTransaction ? await super.selectIdList(query, trx) : await this.redisCache.warp(this.getCacheNsp('data'), cacheId, async () => await super.selectIdList(query, trx))
+    const qb = this.buildIdListQuery(query, trx)
+    const cacheId = this.getListCacheId('list', finger, qb)
+    const worker = async () => (await qb) as Scheme[]
+    return trx?.__isSafeTransaction ? await worker() : await this.cacheWarp(this.getCacheNsp('data'), cacheId, worker)
   }
 
   async findIdSortList(finger: Array<CoaMysql.Dic<any>>, pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    const cacheId = `sort-list:${pager.rows}:${pager.last}:` + secure.sha1($.sortQueryString(...finger))
-    return trx?.__isSafeTransaction ? await super.selectIdSortList(pager, query, trx) : await this.redisCache.warp(this.getCacheNsp('data'), cacheId, async () => await super.selectIdSortList(pager, query, trx))
+    const built = this.buildIdSortListQuery(pager, query, trx)
+    const cacheId = this.getListCacheId(`sort-list:${pager.rows}:${pager.last}`, finger, built.qb, { pager })
+    const worker = async () => this.formatIdSortList((await built.qb) as Scheme[], built)
+    return trx?.__isSafeTransaction ? await worker() : await this.cacheWarp(this.getCacheNsp('data'), cacheId, worker)
   }
 
   async findIdViewList(finger: Array<CoaMysql.Dic<any>>, pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    const cacheId = `view-list:${pager.rows}:${pager.page}:` + secure.sha1($.sortQueryString(...finger))
     const count = await this.findListCount(finger, query, trx)
-    return trx?.__isSafeTransaction ? await super.selectIdViewList(pager, query, trx, count) : await this.redisCache.warp(this.getCacheNsp('data'), cacheId, async () => await super.selectIdViewList(pager, query, trx, count))
+    const built = this.buildIdViewListQuery(pager, query, trx, count)
+    const cacheId = this.getListCacheId(`view-list:${pager.rows}:${pager.page}`, finger, built.qb, { pager })
+    const worker = async () => this.formatIdViewList((await built.qb) as Scheme[], built)
+    return trx?.__isSafeTransaction ? await worker() : await this.cacheWarp(this.getCacheNsp('data'), cacheId, worker)
   }
 
   async mGetCountBy(field: string, ids: string[], trx?: CoaMysql.Transaction) {
+    const uniqueIds = _.uniq(ids)
+    if (uniqueIds.length === 0) return {}
     const queryFunction = async () => {
-      const rows = (await this.table(trx).select({ id: field }).count({ count: this.key }).whereIn(field, ids).groupBy(field)) as any[]
+      const rows = (await this.table(trx).select({ id: field }).count({ count: this.key }).whereIn(field, uniqueIds).groupBy(field)) as any[]
       const result: CoaMysql.Dic<number> = {}
       _.forEach(rows, ({ id, count }) => (result[id] = count))
       return result
     }
-    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.redisCache.mWarp(this.getCacheNsp('count', field), ids, queryFunction)
+    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.redisCache.mWarp(this.getCacheNsp('count', field), uniqueIds, queryFunction)
     return result
   }
 
@@ -125,7 +145,7 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
       const rows = await qb
       return (rows[0]?.count as number) || 0
     }
-    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.redisCache.warp(this.getCacheNsp('count', field), value, queryFunction)
+    const result = trx?.__isSafeTransaction ? await queryFunction() : await this.cacheWarp(this.getCacheNsp('count', field), value, queryFunction)
     return result
   }
 
@@ -136,6 +156,15 @@ export class MysqlCache<Scheme> extends MysqlNative<Scheme> {
 
   getCacheNsp(...nsp: string[]) {
     return this.system + ':' + this.name + ':' + nsp.join(':')
+  }
+
+  protected async cacheWarp<T>(nsp: string, id: string, worker: () => Promise<T>, ms?: number, force = false) {
+    return await (this.redisCache.warp as any)(nsp, id, worker, ms, force, this.cacheLock) as T
+  }
+
+  protected getListCacheId(type: string, finger: Array<CoaMysql.Dic<any>>, qb: any, ext: CoaMysql.Dic<any> = {}) {
+    const sql = qb.toSQL()
+    return type + ':' + secure.sha1(JSON.stringify({ type, system: this.system, database: this.database, model: this.name, finger, sql: sql.sql, bindings: sql.bindings || [], ext }))
   }
 
   async getCacheChangedDataList(ids: string[], data?: CoaMysql.SafePartial<Scheme>, trx?: CoaMysql.Transaction) {
