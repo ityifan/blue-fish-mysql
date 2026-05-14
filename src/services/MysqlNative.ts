@@ -18,6 +18,7 @@ export class MysqlNative<Scheme> {
   protected readonly scheme: any
   protected readonly prefix: string
   protected readonly ms: number
+  protected readonly cacheLock?: CoaMysql.ModelOption<Scheme>['cacheLock']
   protected readonly caches: { index: string[]; count: string[];[name: string]: string[] }
   protected readonly cachesFields = [] as string[]
   protected readonly columns = [] as string[]
@@ -40,6 +41,7 @@ export class MysqlNative<Scheme> {
     const database = this.bin.config.databases[this.system] || CoaError.throw('MysqlNative.ConfigMissing', `MySQL错误: 缺少${this.system}系统数据库配置`)
     this.database = database.database || CoaError.throw('MysqlNative.ConfigMissing', `MySQL错误: 缺少${this.system}系统database配置`)
     this.ms = database.ms || CoaError.throw('MysqlNative.ConfigMissing', `MySQL错误: 缺少${this.system}系统ms配置`)
+    this.cacheLock = option.cacheLock
 
     // 处理caches
     this.caches = _.defaults(option.caches, { index: [], count: [] })
@@ -187,31 +189,53 @@ export class MysqlNative<Scheme> {
 
   // 查询全部列表数量
   protected async selectListCount(query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    const qb = this.table(trx).count({ count: this.name + '.' + this.increment })
-    query(qb)
+    const qb = this.buildListCountQuery(query, trx)
     const rows = await qb
     return (rows[0]?.count as number) || 0
   }
 
+  // 构建全部列表数量查询
+  protected buildListCountQuery(query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
+    const qb = this.table(trx).count({ count: this.name + '.' + this.increment })
+    query(qb)
+    return qb
+  }
+
   // 查询ID格式全部列表
   protected async selectIdList(query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
+    const qb = this.buildIdListQuery(query, trx)
+    return (await qb) as Scheme[]
+  }
+
+  // 构建ID格式全部列表查询
+  protected buildIdListQuery(query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
     const qb = this.table(trx).select(this.name + '.' + this.key)
     query(qb)
     qb.orderBy(this.name + '.' + this.increment, 'desc')
-    return (await qb) as Scheme[]
+    return qb
   }
 
   // 查询ID格式Sort列表
   protected async selectIdSortList(pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
-    // eslint-disable-next-line prefer-const
-    let { last, rows, more, ext } = this.checkSortPager(pager)
+    const built = this.buildIdSortListQuery(pager, query, trx)
+    const list = (await built.qb) as Scheme[]
+    return this.formatIdSortList(list, built)
+  }
 
+  // 构建ID格式Sort列表查询
+  protected buildIdSortListQuery(pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction) {
+    const { last, rows, more, ext } = this.checkSortPager(pager)
     const qb = this.table(trx).select(this.name + '.' + this.key)
     query(qb)
     ext.ignoreLimit || qb.limit(rows + 1).offset(last)
     ext.ignoreOrder || qb.orderBy(this.name + '.' + this.increment, 'desc')
-    const list = (await qb) as Scheme[]
+    return { qb, last, rows, more, ext }
+  }
 
+  // 格式化ID格式Sort列表查询结果
+  protected formatIdSortList(list: Scheme[], built: { last: number; rows: number; more: boolean; ext: any }) {
+    let { last, rows, more } = built
+    const ext = built.ext || {}
     if (list.length === rows + 1) {
       list.pop()
       more = true
@@ -226,15 +250,25 @@ export class MysqlNative<Scheme> {
   // 查询ID格式Sort列表
   protected async selectIdViewList(pager: CoaMysql.Pager, query: CoaMysql.Query, trx?: CoaMysql.Transaction, count?: number) {
     if (count === undefined) count = await this.selectListCount(query, trx)
+    const built = this.buildIdViewListQuery(pager, query, trx, count)
+    const list = (await built.qb) as Scheme[]
+    return this.formatIdViewList(list, built)
+  }
 
-    // eslint-disable-next-line prefer-const
-    let { rows, page, pageMax } = this.checkViewPager(pager, count)
-
+  // 构建ID格式View列表查询
+  protected buildIdViewListQuery(pager: CoaMysql.Pager, query: CoaMysql.Query, trx: CoaMysql.Transaction | undefined, count: number) {
+    const { rows, page, pageMax } = this.checkViewPager(pager, count)
     const qb = this.table(trx).select(this.name + '.' + this.key)
     query(qb)
     qb.limit(rows).offset(rows * (page - 1))
     qb.orderBy(this.name + '.' + this.increment, 'desc')
-    const list = (await qb) as Scheme[]
+    return { qb, rows, page, pageMax, count }
+  }
+
+  // 格式化ID格式View列表查询结果
+  protected formatIdViewList(list: Scheme[], built: { rows: number; page: number; pageMax: number; count: number }) {
+    let { rows } = built
+    const {page, pageMax, count} = built
     rows = list.length
 
     return { list, pager: { rows, page, pageMax, count } }
